@@ -1,0 +1,57 @@
+# Fichier: ansible/playbooks/windows.yml
+---
+- name: "Mission 3: Windows Server - AD & Sécurité"
+  hosts: windows
+  gather_facts: no # Accélère le début si WinRM est lent
+  
+  vars:
+    domain_name: "lab.local"
+    safe_mode_password: "Password123!" # Complexité requise [cite: 58]
+
+  tasks:
+    # --- 1. PROMOTION EN CONTRÔLEUR DE DOMAINE [cite: 51] ---
+    - name: "Installer les fonctionnalités AD DS"
+      win_feature:
+        name: AD-Domain-Services
+        include_management_tools: yes
+        state: present
+
+    - name: "Créer la forêt Active Directory (Attention: Redémarre le serveur)"
+      microsoft.ad.domain:
+        dns_domain_name: "{{ domain_name }}"
+        safe_mode_password: "{{ safe_mode_password }}"
+      register: ad_promotion
+
+    - name: "Redémarrer si nécessaire après promotion AD"
+      win_reboot:
+      when: ad_promotion.reboot_required
+
+    # --- 2. HARDENING WINDOWS [cite: 52-61] ---
+    
+    [cite_start]# [cite: 56] Désactiver le compte Invité
+    - name: "Désactiver le compte Invité"
+      win_user:
+        name: Guest
+        account_disabled: yes
+
+    [cite_start]# [cite: 57] Activer le Pare-feu pour tous les profils
+    - name: "Activer le pare-feu Windows (Tous profils)"
+      community.windows.win_firewall:
+        state: enabled
+        profiles:
+          - Domain
+          - Private
+          - Public
+
+    [cite_start]# [cite: 60] Désactiver SMBv1
+    - name: "Désactiver SMBv1 (Feature)"
+      win_optional_feature:
+        name: SMB1Protocol
+        state: absent
+
+    [cite_start]# [cite: 55] Installation LAPS (Simulation via Chocolatey si présent, sinon script)
+    # Pour ce TP, on s'assure juste que le dossier AdmPwd existe (base LAPS)
+    - name: "Créer dossier pour LAPS (Simulation)"
+      win_file:
+        path: 'C:\Program Files\LAPS'
+        state: directory

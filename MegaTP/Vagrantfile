@@ -1,0 +1,74 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  
+  # Configuration globale : évite de vérifier les mises à jour des box à chaque lancement
+  config.vm.box_check_update = false
+
+  # ===========================================================================
+  # 1. Machine ADMIN (Ubuntu)
+  # Rôle: Nœud de contrôle Ansible, Serveur Zabbix
+  # ===========================================================================
+  config.vm.define "admin" do |admin|
+    admin.vm.box = "bento/ubuntu-22.04"
+    admin.vm.hostname = "admin.lab.local"
+    admin.vm.network "private_network", ip: "192.168.56.10"
+    
+    admin.vm.provider "virtualbox" do |vb|
+      vb.memory = "2048"
+      vb.cpus = 2
+    end
+
+    # Montage du dossier ansible pour travailler depuis la VM Admin
+    admin.vm.synced_folder "./ansible", "/home/vagrant/ansible"
+    
+    # Montage du dossier scripts (nécessaire pour trouver le bootstrap)
+    admin.vm.synced_folder "./scripts", "/home/vagrant/scripts"
+
+    # PROVISIONING : Appel du script externe au lieu d'écrire tout le code ici
+    # Cela installe Ansible, Python pour WinRM, et génère les clés SSH
+    admin.vm.provision "shell", path: "scripts/bootstrap_admin.sh"
+  end
+
+  # ===========================================================================
+  # 2. & 3. NODES HA (RedHat / AlmaLinux)
+  # Rôle: Cluster HA (Web + Samba)
+  # ===========================================================================
+  # On utilise une boucle pour créer Node01 et Node02 proprement
+  (1..2).each do |i|
+    config.vm.define "node0#{i}" do |node|
+      # Utilisation d'AlmaLinux 9 (équivalent RedHat gratuit et binaire compatible)
+      node.vm.box = "generic/rocky9" 
+      node.vm.hostname = "node0#{i}.lab.local"
+      node.vm.network "private_network", ip: "192.168.56.1#{i}" # IPs: .11 et .12
+
+      node.vm.provider "virtualbox" do |vb|
+        vb.memory = "1024"
+        vb.cpus = 1
+      end
+    end
+  end
+
+  # ===========================================================================
+  # 4. WINDOWS SERVER
+  # Rôle: Contrôleur de Domaine (AD)
+  # ===========================================================================
+  config.vm.define "winsrv" do |win|
+    # Box Windows Server 2019 Standard
+    win.vm.box = "gusztavvargadr/windows-server-2019-standard"
+    win.vm.hostname = "winsrv"
+    win.vm.network "private_network", ip: "192.168.56.13"
+
+    win.vm.provider "virtualbox" do |vb|
+      vb.memory = "2048"
+      vb.cpus = 2
+      # Active la virtualisation imbriquée (souvent nécessaire pour certaines fonctionnalités)
+      vb.customize ["modifyvm", :id, "--nested-hw-virt", "on"]
+    end
+    
+    # Configuration WinRM pour qu'Ansible puisse se connecter à Windows
+    win.vm.communicator = "winrm"
+  end
+
+end

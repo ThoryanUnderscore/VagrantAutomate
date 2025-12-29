@@ -1,0 +1,62 @@
+# Fichier: ansible/playbooks/security.yml
+---
+- name: "Mission 2: Hardening des serveurs Linux"
+  hosts: ha_cluster
+  become: yes
+
+  tasks:
+    # --- 1. CONFIGURATION FIREWALLD [cite: 46] ---
+    - name: "S'assurer que firewalld est installé et démarré"
+      service:
+        name: firewalld
+        state: started
+        enabled: yes
+
+    - name: "Ouvrir les ports nécessaires (SSH, HTTP, HA, Zabbix)"
+      firewalld:
+        port: "{{ item }}"
+        permanent: yes
+        state: enabled
+        immediate: yes
+      loop:
+        - 22/tcp    # SSH
+        - 80/tcp    # HTTP Nginx
+        - 443/tcp   # HTTPS
+        - 10050/tcp # Zabbix Agent
+        - 2224/tcp  # PCS
+        - 3121/tcp  # PCS
+        - 5405/udp  # Corosync
+        - 445/tcp   # SMB
+
+    # --- 2. HARDENING SSH [cite: 47] ---
+    - name: "Désactiver la connexion root en SSH"
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitRootLogin'
+        line: 'PermitRootLogin no'
+        validate: 'sshd -t -f %s'
+      notify: Restart SSH
+
+    # --- 3. MISES À JOUR AUTOMATIQUES [cite: 48] ---
+    - name: "Installer dnf-automatic pour les mises à jour de sécurité"
+      dnf:
+        name: dnf-automatic
+        state: present
+
+    - name: "Configurer dnf-automatic pour appliquer les mises à jour de sécurité"
+      lineinfile:
+        path: /etc/dnf/automatic.conf
+        regexp: '^upgrade_type ='
+        line: 'upgrade_type = security'
+
+    - name: "Activer le timer dnf-automatic"
+      service:
+        name: dnf-automatic.timer
+        state: started
+        enabled: yes
+
+  handlers:
+    - name: Restart SSH
+      service:
+        name: sshd
+        state: restarted
