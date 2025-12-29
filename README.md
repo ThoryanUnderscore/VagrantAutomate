@@ -94,4 +94,41 @@ L'infrastructure est déployée via un **Vagrantfile unique**  et comprend :
 
     3.  Page Web Nginx via la VIP (192.168.56.100):  
       <img width="1919" height="913" alt="image" src="https://github.com/user-attachments/assets/e22a6b0a-1c18-4b36-b77f-05fe14aefbee" />
+## 6. Explications des choix
 
+Architecture Infrastructure Haute Disponibilité & Supervision
+Ce projet présente le déploiement d'une infrastructure robuste et automatisée, articulée autour de quatre missions principales : la Haute Disponibilité, la Sécurisation, la gestion d'Annuaire et la Supervision.
+
+🏗️ Architecture Technique
+L'infrastructure est segmentée en plusieurs rôles distincts pour garantir l'isolation des services et la facilité d'administration :
+
+Machine Admin (Contrôleur) : Centralise l'orchestration via Ansible et héberge la stack de supervision Zabbix sous Docker.
+
+Cluster Linux (Nodes 01 & 02) : Deux serveurs redondants hébergeant les services applicatifs.
+
+Windows Server (winsrv) : Contrôleur de domaine Active Directory pour la gestion centralisée des identités.
+
+💡 Explication des Choix
+Pourquoi cette architecture ?
+Modularité (Docker) : Le choix de Docker sur la machine Admin pour Zabbix permet de déployer une solution de supervision complète (Serveur, Web, DB) en quelques secondes, sans conflits de dépendances avec l'OS hôte.
+
+Automatisation (Ansible) : L'utilisation de Playbooks garantit que l'infrastructure est reproductible. En cas de crash d'une VM, le déploiement des configurations (Hardening, Agents) se fait de manière identique et rapide.
+
+Sécurité par couches : Chaque VM possède son propre pare-feu (Firewalld), et l'accès SSH est restreint, limitant la surface d'attaque en cas d'intrusion sur un nœud.
+
+🔄 Stratégie de Redondance (High Availability)
+La continuité de service est assurée par une stratégie de redondance Active/Passive basée sur Keepalived et le protocole VRRP (Virtual Router Redundancy Protocol).
+
+Fonctionnement :
+IP Virtuelle (VIP) : Une adresse IP unique (192.168.56.100) est partagée entre node01 (Master) et node02 (Backup).
+
+Health Check : Keepalived surveille l'état de santé du nœud Master.
+
+Failover automatique : Si node01 devient injoignable ou si son service critique s'arrête, l'IP virtuelle bascule instantanément vers node02 en moins d'une seconde.
+
+Transparence : Pour l'utilisateur final ou les services connectés, l'accès à l'infrastructure ne change jamais d'IP, garantissant une disponibilité maximale.
+
+🛡️ Sécurisation & Supervision
+Hardening : Mise en place de Fail2Ban pour bannir automatiquement les tentatives de force brute sur le SSH.
+
+Supervision Zabbix : Déploiement d'agents sur toutes les machines (Linux et Windows) pour collecter des métriques en temps réel (CPU, RAM, état des services) et alerter en cas de dépassement de seuil.
