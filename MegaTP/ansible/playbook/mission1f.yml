@@ -1,0 +1,46 @@
+---
+- name: "Mission 1 : Finalisation Samba HA et Page Web"
+  hosts: cluster_nodes
+  become: yes
+  vars:
+    vip_address: "192.168.56.100"
+
+  tasks:
+    # --- CONFIGURATION WEB ---
+    - name: Créer une page Web index.html unique par noeud
+      copy:
+        content: "<h1>Bienvenue sur le cluster HA - Serveur : {{ ansible_hostname }}</h1>"
+        dest: /usr/share/nginx/html/index.html
+
+    # --- CONFIGURATION SAMBA ---
+    - name: Créer le répertoire de partage Samba
+      file:
+        path: /srv/samba/shared
+        state: directory
+        mode: '0777'
+
+    - name: Configurer le fichier smb.conf
+      blockinfile:
+        path: /etc/samba/smb.conf
+        block: |
+          [HA_Share]
+             path = /srv/samba/shared
+             writable = yes
+             guest ok = yes
+             read only = no
+
+    # --- INTEGRATION SAMBA DANS LE CLUSTER ---
+    - name: Créer la ressource Samba dans le cluster
+      command: "pcs resource create SambaServer systemd:smb op monitor interval=30s"
+      run_once: true
+      delegate_to: node01
+
+    - name: Ajouter Samba au groupe HA-Services
+      command: "pcs resource group add HA-Services SambaServer"
+      run_once: true
+      delegate_to: node01
+
+    - name: Appliquer les contraintes de colocation (Tout sur le même noeud)
+      command: "pcs constraint colocation add HA-Services with VIP INFINITY"
+      run_once: true
+      delegate_to: node01

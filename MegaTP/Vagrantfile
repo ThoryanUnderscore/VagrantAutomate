@@ -1,0 +1,56 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  
+  config.vm.provider "vmware_desktop" do |v|
+    v.gui = true
+    v.vmx["memsize"] = "1024"
+    v.vmx["numvcpus"] = "1"
+    v.vmx["ethernet0.virtualDev"] = "vmxnet3"
+  end
+
+  # ADMIN (Ubuntu) - 192.168.56.10
+  config.vm.define "admin" do |admin|
+    admin.vm.box = "bento/ubuntu-22.04"
+    admin.vm.hostname = "admin"
+    admin.vm.network "private_network", ip: "192.168.56.10"
+    admin.vm.provider "vmware_desktop" do |v|
+      v.vmx["memsize"] = "2048"
+      v.vmx["numvcpus"] = "2"
+    end
+    admin.vm.provision "shell", inline: "apt-get update && apt-get install -y ansible sshpass git"
+  end
+
+  # NODE01 (RedHat) - 192.168.56.11
+  config.vm.define "node01" do |node|
+    node.vm.box = "bento/almalinux-9"
+    node.vm.hostname = "node01"
+    node.vm.network "private_network", ip: "192.168.56.11"
+  end
+
+  # NODE02 (RedHat) - 192.168.56.12
+  config.vm.define "node02" do |node|
+    node.vm.box = "bento/almalinux-9"
+    node.vm.hostname = "node02"
+    node.vm.network "private_network", ip: "192.168.56.12"
+  end
+
+  # WINSRV (Windows) - 192.168.56.20
+  # WINSRV (Windows Server 2019)
+  config.vm.define "winsrv" do |win|
+    win.vm.box = "gusztavvargadr/windows-server-2019-standard"
+    win.vm.hostname = "winsrv"
+    win.vm.network "private_network", ip: "192.168.56.20"
+    
+    win.vm.communicator = "winrm"
+    win.winrm.username = "vagrant"
+    win.winrm.password = "vagrant"
+
+    win.vm.provider "vmware_desktop" do |v|
+      v.vmx["memsize"] = "4096"
+      v.vmx["numvcpus"] = "2"
+      v.vmx["gui.restrict" ] = "FALSE"
+    end
+  end
+end

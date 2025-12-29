@@ -1,0 +1,61 @@
+---
+# PARTIE 1 : ON FORCE L'INSTALLATION SUR L'ADMIN
+- name: "Installation des dépendances sur Admin"
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  tasks:
+    - name: "Forcer l'installation des collections"
+      shell: "ansible-galaxy collection install {{ item }} --force"
+      loop:
+        - ansible.windows
+        - microsoft.ad
+        - community.general
+
+# PARTIE 2 : CONFIGURATION DU WINDOWS
+- name: "Mission 3 : Windows Server & Active Directory"
+  hosts: windows_nodes
+  gather_facts: yes
+  tasks:
+    - name: Installer les fonctionnalités AD DS
+      ansible.windows.win_feature:
+        name: AD-Domain-Services
+        state: present
+        include_management_tools: yes
+
+    - name: Promouvoir en Contrôleur de Domaine
+      microsoft.ad.domain:
+        dns_domain_name: "pme.local"
+        safe_mode_password: "Password123!"
+      register: ad_promotion
+
+    - name: Rebooter si nécessaire
+      ansible.windows.win_reboot:
+      when: ad_promotion.reboot_required
+
+    - name: "Hardening : Désactiver l'invité"
+      ansible.windows.win_user:
+        name: Guest
+        account_disabled: yes
+
+    - name: "Hardening : Firewall"
+      ansible.windows.win_firewall:
+        state: enabled
+        profiles: ["Domain", "Private", "Public"]
+
+    # --- ATTENTION : SI LE MODULE DOMAIN_PASSWORD_POLICY BLOQUE ENCORE ---
+    # On utilise une commande PowerShell directe pour être CERTAIN que ça passe
+    - name: "Hardening : Politique de mot de passe (12 chars)"
+      ansible.windows.win_shell: |
+        Set-ADDefaultDomainPasswordPolicy -Identity "pme.local" -MinPasswordLength 12 -ComplexityEnabled $true
+      ignore_errors: yes
+
+    - name: "Hardening : Désactiver SMBv1 et LLMNR"
+      ansible.windows.win_regedit:
+        path: "{{ item.path }}"
+        name: "{{ item.name }}"
+        data: 0
+        type: dword
+      loop:
+        - { path: 'HKLM:\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters', name: 'SMB1' }
+        - { path: 'HKLM:\Software\Policies\Microsoft\Windows NT\DNSClient', name: 'EnableMulticast' }

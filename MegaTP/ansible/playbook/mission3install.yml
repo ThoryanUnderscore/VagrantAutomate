@@ -1,0 +1,11 @@
+---
+- name: "Préparation de l'Admin"
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  tasks:
+    - name: "Installation des collections Ansible"
+      command: "ansible-galaxy collection install {{ item }} --force"
+      loop:
+        - ansible.windows
+        - microsoft.ad

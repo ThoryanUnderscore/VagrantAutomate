@@ -1,0 +1,16 @@
+---
+- name: "Fix Nginx et Cluster"
+  hosts: cluster_nodes
+  become: yes
+  tasks:
+    - name: Stopper Nginx via Systemd (pour laisser le cluster gérer)
+      service:
+        name: nginx
+        state: stopped
+        enabled: no
+
+    - name: Nettoyer les erreurs de ressources du cluster
+      command: "pcs resource cleanup"
+
+    - name: Relancer toutes les ressources
+      command: "pcs resource enable HA-Services"

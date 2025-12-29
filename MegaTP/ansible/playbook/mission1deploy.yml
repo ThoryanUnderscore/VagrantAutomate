@@ -1,0 +1,70 @@
+---
+- name: "Mission 1 : Cluster HA Linux"
+  hosts: cluster_nodes
+  become: yes
+  vars:
+    vip_address: "192.168.56.100"
+    cluster_pass: "vagrant"
+
+  tasks:
+    # --- ETAPE 0 : FIX CONNECTIVITÉ (Pourquoi node02 était offline) ---
+    - name: Stopper le firewall pour le TP (évite les blocages Corosync)
+      service:
+        name: firewalld
+        state: stopped
+        enabled: no
+
+    - name: Configurer le fichier /etc/hosts pour la résolution locale
+      copy:
+        content: |
+          127.0.0.1   localhost
+          192.168.56.11 node01
+          192.168.56.12 node02
+        dest: /etc/hosts
+
+    # --- ETAPE 1 : INSTALLATION ---
+    - name: Installer Pacemaker, Corosync, PCS, Nginx et Samba
+      dnf:
+        name: [pacemaker, corosync, pcs, nginx, samba, resource-agents]
+        state: present
+
+    - name: Démarrer le service PCSD
+      service:
+        name: pcsd
+        state: started
+        enabled: yes
+
+    - name: Configurer le mot de passe de hacluster
+      user:
+        name: hacluster
+        password: "{{ cluster_pass | password_hash('sha512') }}"
+
+    # --- ETAPE 2 : CONFIGURATION CLUSTER ---
+    - name: Authentification des noeuds
+      command: "pcs host auth node01 node02 -u hacluster -p {{ cluster_pass }}"
+      run_once: true
+
+    - name: Setup du cluster
+      command: "pcs cluster setup mycluster node01 node02 --force"
+      run_once: true
+
+    - name: Start du cluster sur tous les noeuds
+      command: "pcs cluster start --all"
+      run_once: true
+
+    - name: Désactiver le STONITH (Obligatoire en VM sans fencing)
+      command: "pcs property set stonith-enabled=false"
+      run_once: true
+
+    # --- ETAPE 3 : RESSOURCES (VIP + Nginx + Samba) ---
+    - name: Créer la VIP (IP Flottante)
+      command: "pcs resource create VIP ocf:heartbeat:IPaddr2 ip={{ vip_address }} cidr_netmask=24 op monitor interval=30s"
+      run_once: true
+
+    - name: Créer la ressource Nginx
+      command: "pcs resource create WebServer ocf:heartbeat:nginx configfile=/etc/nginx/nginx.conf op monitor interval=10s"
+      run_once: true
+
+    - name: Créer le groupe HA (IP + Nginx + Samba doivent basculer ensemble)
+      command: "pcs resource group add HA-Services VIP WebServer"
+      run_once: true

@@ -1,0 +1,49 @@
+---
+- name: "Mission 2 : Hardening et Firewall Strict"
+  hosts: cluster_nodes
+  become: yes
+  tasks:
+    - name: S'assurer que firewalld est démarré
+      service:
+        name: firewalld
+        state: started
+        enabled: yes
+
+    - name: "Firewall : Ouverture des ports strictement nécessaires"
+      firewalld:
+        port: "{{ item }}"
+        permanent: yes
+        state: enabled
+        immediate: yes
+      with_items:
+        - 22/tcp          # SSH (Mission 2)
+        - 80/tcp          # HTTP (Nginx Mission 1)
+        - 5404/udp        # Corosync (Cluster)
+        - 5405/udp        # Corosync (Cluster)
+        - 2224/tcp        # PCSD (Cluster GUI/API)
+        - 3121/tcp        # Pacemaker (Cluster)
+        - 9929/tcp        # Corosync Qnetd (Cluster)
+        - 10050/tcp       # Zabbix Agent (Mission 4)
+        - 137/udp         # Samba (NetBIOS)
+        - 138/udp         # Samba (NetBIOS)
+        - 139/tcp         # Samba (SMB)
+        - 445/tcp         # Samba (SMB)
+
+    - name: "Sécurité SSH : Désactiver le login root"
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^PermitRootLogin'
+        line: 'PermitRootLogin no'
+      notify: Restart SSH
+
+    - name: "Mises à jour : Appliquer les patchs de sécurité"
+      dnf:
+        name: '*'
+        security: yes
+        state: latest
+
+  handlers:
+    - name: Restart SSH
+      service:
+        name: sshd
+        state: restarted

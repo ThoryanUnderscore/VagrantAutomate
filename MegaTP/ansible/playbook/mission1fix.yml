@@ -1,0 +1,23 @@
+---
+- name: "Correction des accès réseau et services"
+  hosts: cluster_nodes
+  become: yes
+  tasks:
+    - name: Stopper COMPLÈTEMENT le firewall (pour test)
+      service:
+        name: firewalld
+        state: stopped
+        enabled: no
+
+    - name: Mettre SELinux en mode permissif (évite les blocages Nginx)
+      selinux:
+        policy: targeted
+        state: permissive
+
+    - name: Forcer le redémarrage de Nginx sur les deux noeuds
+      service:
+        name: nginx
+        state: restarted
+
+    - name: S'assurer que les services du cluster démarrent au boot (fix le disabled)
+      command: "pcs cluster enable --all"
