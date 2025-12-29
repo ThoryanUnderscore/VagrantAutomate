@@ -39,6 +39,27 @@ L'infrastructure est déployée via un **Vagrantfile unique**  et comprend :
     cd /home/vagrant/ansible
     ansible-playbook -i inventory/hosts.ini site.yml
     ```
+    Mission 1:
+    ```bash
+    ansible-playbook -i hosts.ini mission1fix.yml
+    ansible-playbook -i hosts.ini mission1bug.yml
+    ansible-playbook -i hosts.ini mission1_deploy.yml
+    ansible-playbook -i hosts.ini mission1f.yml
+    ```
+    Mission 2:
+    ```bash
+    ansible-playbook -i hosts.ini mission2.yml
+    ```
+    Mission 3:
+    ```bash
+    ansible-playbook -i hosts.ini mission3install.yml
+    ansible-playbook -i hosts.ini mission3.yml
+    ```
+    Mission 4:
+     ```bash
+      ansible-playbook -i hosts.ini mission4fix.yml
+      ansible-playbook -i hosts.ini mission4.yml
+     ```
 
 ## 4. Missions Réalisées
 
