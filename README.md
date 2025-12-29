@@ -13,7 +13,7 @@ L'infrastructure est déployée via un **Vagrantfile unique**  et comprend :
 
 ## 3. Guide d'Installation
 ### Prérequis
-* VirtualBox et Vagrant installés.
+* VMWare et Vagrant installés.
 * Connexion Internet active pour le téléchargement des images (boxes).
 * Vagrant pour VMWare Workstation Pro
 * Installer le plugin pour VmWare Workstation
