@@ -84,6 +84,12 @@ L'infrastructure est déployée via un **Vagrantfile unique**  et comprend :
 ## 5. Preuves de Fonctionnement
 * **Schéma d'architecture** : [Insérer lien vers image ou fichier Draw.io].
 * **Screenshots attendus**:
-    1.  État du Cluster (`pcs status`).
-    2.  Dashboard Zabbix personnalisé.
-    3.  Page Web Nginx via la VIP (192.168.56.20).
+    1. : État du Cluster (`pcs status`)
+       <img width="945" height="423" alt="image" src="https://github.com/user-attachments/assets/35832138-b51f-4961-811d-625e91149305" />
+
+    2.  Dashboard Zabbix personnalisé:
+       <img width="1919" height="825" alt="image" src="https://github.com/user-attachments/assets/6273cfb8-f82a-48de-b69a-893cd60dbdb9" />
+
+    3.  Page Web Nginx via la VIP (192.168.56.20):  
+      <img width="1919" height="913" alt="image" src="https://github.com/user-attachments/assets/e22a6b0a-1c18-4b36-b77f-05fe14aefbee" />
+
