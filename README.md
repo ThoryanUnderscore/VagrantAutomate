@@ -16,15 +16,23 @@ L'infrastructure est déployée via un **Vagrantfile unique**  et comprend :
 * VirtualBox et Vagrant installés.
 * Connexion Internet active pour le téléchargement des images (boxes).
 * Vagrant pour VMWare Workstation Pro
+* Installer le plugin pour VmWare Workstation
+  ```bash
+  vagrant plugin install vagrant-vmware-desktop
+  ```
 
 ### Déploiement
 1.  **Lancer l'infrastructure** :
     ```bash
     vagrant up
     ```
+    ou
+    ```bash
+    vagrant up --provider vmware_desktop
+    ```
     *Cette commande déploie automatiquement les 4 machines virtuelles.*
 
-2.  **Configuration Ansible** :
+3.  **Configuration Ansible** :
     Connectez-vous à la machine Admin et lancez le déploiement automatisé :
     ```bash
     vagrant ssh admin
